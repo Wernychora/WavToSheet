@@ -22,8 +22,10 @@ def fft(freqTab, toneTab):
 		for i in range(fouriers):
 			freqRow = []
 			dataRow = []
+			window = np.hanning(fourierSize)
 			for j in range(fourierSize):
 				dataRow.append(data[i*fourierStep+j])
+			dataRow = dataRow * window
 			dft = np.fft.rfft(dataRow)
 			for j in range(len(dataRow)//2):
 				freqRow.append(np.log2(abs(dft[j])+1))
@@ -59,7 +61,7 @@ def display(freqTab, toneTab, toneFourierSamples):
 	diffArray = []
 	for i in range(fouriers-1):
 		sum = 0
-		for j in range(len(specAxisY)):
+		for j in range(int(len(specAxisY)/5), len(specAxisY)):
 			sum += abs(freqTab[i+1][j]-freqTab[i][j])/(freqTab[i+1][j]+freqTab[i][j]+1)
 		diffArray.append(sum)
 		
