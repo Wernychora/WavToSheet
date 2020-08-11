@@ -42,6 +42,18 @@ def fft(freqTab, toneTab):
 	
 	return minimalToneFreqRowSize
 
+def diffPlot(array, title, nr, bottomMargin, topMargin):
+	sortedArray = sorted(array)
+	topVal = sortedArray[int(len(array)*topMargin)]
+	bottomVal = sortedArray[int(len(array)*bottomMargin)]
+	
+	plt.subplot(2, 2, nr)
+	plt.plot(np.arange(0, (fouriers-1)/20, 1/20), array)
+	plt.title(title)
+	plt.xlim(0,15)
+	plt.ylim(bottomVal,topVal)
+	plt.xlabel("time [s]")
+
 def display(freqTab, toneTab, toneFourierSamples):
 	#spectrogram
 	specAxisY = []
@@ -50,8 +62,9 @@ def display(freqTab, toneTab, toneFourierSamples):
 			specAxisY.append(freq*i)
 		
 	amp = np.array(freqTab).transpose()
-	plt.subplot(2, 1, 1)
+	plt.subplot(2, 2, 1)
 	plt.pcolormesh(np.arange(0, fouriers/20, 1/20), specAxisY, amp, shading="nearest")
+	plt.title("Spectrogram")
 	plt.xlim(0,15)
 	plt.ylim(0,11000)
 	plt.ylabel("frequency [Hz]")
@@ -61,20 +74,19 @@ def display(freqTab, toneTab, toneFourierSamples):
 	diffArray = []
 	for i in range(fouriers-1):
 		sum = 0
-		for j in range(int(len(specAxisY)/5), len(specAxisY)):
+		for j in range(len(specAxisY)):
 			sum += abs(freqTab[i+1][j]-freqTab[i][j])/(freqTab[i+1][j]+freqTab[i][j]+1)
-		diffArray.append(sum)
-		
-	sortedDiffArray = sorted(diffArray)
-	topVal = sortedDiffArray[int(len(diffArray)*0.99)]
-	bottomVal = sortedDiffArray[int(len(diffArray)*0.01)]
+		diffArray.append(sum)	
+	diffPlot(diffArray, "Difference diagram", 2, 0.01, 0.99)
 	
-	plt.subplot(2, 1, 2)
-	plt.plot(np.arange(0, (fouriers-1)/20, 1/20), diffArray)
-	plt.xlim(0,15)
-	plt.ylim(bottomVal,topVal)
-	plt.xlabel('time [s]')
-
+	#diff derivative diagram
+	diffPrim = np.gradient(diffArray, 1)
+	diffPlot(diffPrim, "Derivative diagram", 3, 0.01, 0.99)
+	
+	#diff second derivative diagram
+	diffBis = np.gradient(diffPrim, 1)
+	diffPlot(diffBis, "Second derivative diagram", 4, 0.02, 0.98)
+	
 	plt.show()
 	
 #####
