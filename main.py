@@ -53,12 +53,12 @@ def diffPlot(array, flagArray, title, nr, bottomMargin, topMargin, differentiato
 		for x in range(len(array)):
 			if array[x] < topVal/20 and array[x] > bottomVal/20:
 				plt.plot(x/20, 0, marker='o', markersize=3, color="red")
-				flagArray = True
+				flagArray[x] = True
 	if differentiator == "negativePoint":
 		for x in range(len(array)):
 			if array[x] < bottomVal/3:
 				plt.plot(x/20, 0, marker='o', markersize=3, color="red")
-				flagArray = True
+				flagArray[x] = True
 	plt.title(title)
 	plt.xlim(0,15)
 	plt.ylim(bottomVal,topVal)
@@ -77,7 +77,7 @@ def display(freqTab, toneTab, toneFourierSamples):
 	diffFlags = []
 	for i in range(fouriers-1):
 		sum = 0
-		for j in range(len(specAxisY)):
+		for j in range(int(len(specAxisY)/10), len(specAxisY)):
 			sum += abs(freqTab[i+1][j]-freqTab[i][j])/(freqTab[i+1][j]+freqTab[i][j]+1)
 		diffArray.append(sum)	
 	diffPlot(diffArray, diffFlags, "Difference diagram", 2, 0.01, 0.99)
@@ -95,9 +95,9 @@ def display(freqTab, toneTab, toneFourierSamples):
 	#spectrogram display
 	plt.subplot(2, 2, 1)
 	plt.pcolormesh(np.arange(0, fouriers/20, 1/20), specAxisY, amp, shading="nearest")
-	for x in range(len(diffArray)):
-		if diffPrimFlags[x] and diffBisFlags[x]:
-			plt.plot(x/20, 0, marker='o', markersize=3, color="red")
+	for x in range(2, len(diffArray)-2):
+		if diffPrimFlags[x] and (diffBisFlags[x-2] or diffBisFlags[x-1] or diffBisFlags[x] or diffBisFlags[x+1]):
+			plt.axvline(x/20, 0, 10000, label='pyplot vertical line', color="red")
 	plt.title("Spectrogram")
 	plt.xlim(0,15)
 	plt.ylim(0,11000)
