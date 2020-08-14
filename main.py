@@ -42,50 +42,67 @@ def fft(freqTab, toneTab):
 	
 	return minimalToneFreqRowSize
 
-def diffPlot(array, title, nr, bottomMargin, topMargin):
+def diffPlot(array, flagArray, title, nr, bottomMargin, topMargin, differentiator = "null"):
 	sortedArray = sorted(array)
 	topVal = sortedArray[int(len(array)*topMargin)]
 	bottomVal = sortedArray[int(len(array)*bottomMargin)]
 	
 	plt.subplot(2, 2, nr)
 	plt.plot(np.arange(0, (fouriers-1)/20, 1/20), array)
+	if differentiator == "zeroPoint":
+		for x in range(len(array)):
+			if array[x] < topVal/20 and array[x] > bottomVal/20:
+				plt.plot(x/20, 0, marker='o', markersize=3, color="red")
+				flagArray = True
+	if differentiator == "negativePoint":
+		for x in range(len(array)):
+			if array[x] < bottomVal/3:
+				plt.plot(x/20, 0, marker='o', markersize=3, color="red")
+				flagArray = True
 	plt.title(title)
 	plt.xlim(0,15)
 	plt.ylim(bottomVal,topVal)
 	plt.xlabel("time [s]")
 
 def display(freqTab, toneTab, toneFourierSamples):
-	#spectrogram
+	#spectrogram data
 	specAxisY = []
 	for i in range(toneFourierSamples):
 		for tone, freq in contraOctave.items():
-			specAxisY.append(freq*i)
-		
+			specAxisY.append(freq*i)		
 	amp = np.array(freqTab).transpose()
-	plt.subplot(2, 2, 1)
-	plt.pcolormesh(np.arange(0, fouriers/20, 1/20), specAxisY, amp, shading="nearest")
-	plt.title("Spectrogram")
-	plt.xlim(0,15)
-	plt.ylim(0,11000)
-	plt.ylabel("frequency [Hz]")
-	plt.xlabel("time [s]")
 
 	#difference diagram
 	diffArray = []
+	diffFlags = []
 	for i in range(fouriers-1):
 		sum = 0
 		for j in range(len(specAxisY)):
 			sum += abs(freqTab[i+1][j]-freqTab[i][j])/(freqTab[i+1][j]+freqTab[i][j]+1)
 		diffArray.append(sum)	
-	diffPlot(diffArray, "Difference diagram", 2, 0.01, 0.99)
+	diffPlot(diffArray, diffFlags, "Difference diagram", 2, 0.01, 0.99)
 	
 	#diff derivative diagram
-	diffPrim = np.gradient(diffArray, 1)
-	diffPlot(diffPrim, "Derivative diagram", 3, 0.01, 0.99)
+	diffPrim = np.gradient(diffArray, edge_order = 2)
+	diffPrimFlags = [False] * len(diffArray)
+	diffPlot(diffPrim, diffPrimFlags, "Derivative diagram", 3, 0.01, 0.99, "zeroPoint")
 	
 	#diff second derivative diagram
-	diffBis = np.gradient(diffPrim, 1)
-	diffPlot(diffBis, "Second derivative diagram", 4, 0.02, 0.98)
+	diffBis = np.gradient(diffPrim, edge_order = 2)
+	diffBisFlags = [False] * len(diffArray)
+	diffPlot(diffBis, diffBisFlags, "Second derivative diagram", 4, 0.02, 0.98, "negativePoint")
+	
+	#spectrogram display
+	plt.subplot(2, 2, 1)
+	plt.pcolormesh(np.arange(0, fouriers/20, 1/20), specAxisY, amp, shading="nearest")
+	for x in range(len(diffArray)):
+		if diffPrimFlags[x] and diffBisFlags[x]:
+			plt.plot(x/20, 0, marker='o', markersize=3, color="red")
+	plt.title("Spectrogram")
+	plt.xlim(0,15)
+	plt.ylim(0,11000)
+	plt.ylabel("frequency [Hz]")
+	plt.xlabel("time [s]")
 	
 	plt.show()
 	
