@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import pylab
 import sys
 from colorsys import hls_to_rgb
+from scipy.interpolate import splrep, splev
 
 def read_wav_file():
 	samples = int(fouriers*frameRate*fourierSection/1000)
@@ -64,16 +65,21 @@ def diffPlot(array, flagArray, title, nr, bottomMargin, topMargin, differentiato
 	bottomVal = sortedArray[int(len(array)*bottomMargin)]
 	
 	plt.subplot(2, 2, nr)
-	plt.plot(np.arange(0, (fouriers-1)/20, 1/20), array)
+	xTab = np.arange(0, (fouriers-1)/20, 1/20)
+	plt.plot(xTab, array)
+	if differentiator == "null":
+		f = splrep(xTab,array,k=3,s=20000)
+		array [:] = splev(xTab, f) [:]
+		plt.plot(xTab, array, color = "green")
 	if differentiator == "zeroPoint":
 		for x in range(len(array)):
-			if array[x] < topVal/20 and array[x] > bottomVal/20:
-				plt.plot(x/20, 0, marker='o', markersize=3, color="red")
+			if array[x] < topVal/5 and array[x] > bottomVal/5:
+				plt.plot(x/20, 0, marker='o', markersize=1, color="red")
 				flagArray[x] = True
 	if differentiator == "negativePoint":
 		for x in range(len(array)):
 			if array[x] < bottomVal/3:
-				plt.plot(x/20, 0, marker='o', markersize=3, color="red")
+				plt.plot(x/20, 0, marker='o', markersize=1, color="red")
 				flagArray[x] = True
 	plt.title(title)
 	plt.xlim(0,fouriers/20)
@@ -116,12 +122,12 @@ def display(freqTab, dft2Tab, toneFourierSamples, mode):
 		#diff derivative plot
 		diffPrim = np.gradient(diffArray, edge_order = 2)
 		diffPrimFlags = [False] * len(diffArray)
-		diffPlot(diffPrim, diffPrimFlags, "Derivative diagram", 3, 0.01, 0.99, "zeroPoint")
+		diffPlot(diffPrim, diffPrimFlags, "Derivative diagram", 3, 0.02, 0.98, "zeroPoint")
 		
 		#diff second derivative plot
 		diffBis = np.gradient(diffPrim, edge_order = 2)
 		diffBisFlags = [False] * len(diffArray)
-		diffPlot(diffBis, diffBisFlags, "Second derivative diagram", 4, 0.02, 0.98, "negativePoint")
+		diffPlot(diffBis, diffBisFlags, "Second derivative diagram", 4, 0.03, 0.97, "negativePoint")
 		
 	#spectrogram display
 	if mode == "diffPlots": plt.subplot(2, 2, 1)
@@ -130,7 +136,7 @@ def display(freqTab, dft2Tab, toneFourierSamples, mode):
 	if mode == "diffPlots":
 		for x in range(2, len(diffArray)-2):
 			if diffPrimFlags[x] and (diffBisFlags[x-2] or diffBisFlags[x-1] or diffBisFlags[x] or diffBisFlags[x+1]):
-				plt.axvline(x/20, 0, 10000, label='pyplot vertical line', color="red")
+				plt.axvline(x/20, 0, 10000, label = "pyplot vertical line", color = "red", linewidth = 0.4)
 	plt.title("Spectrogram")
 	plt.xlim(0,fouriers/20)
 	plt.ylim(0,11000)
@@ -170,7 +176,7 @@ generatorFlag = re.search("wav$", sys.argv[1]) == None
 track = None
 length = 0
 frameRate = 44100
-fouriers = 10;
+fouriers = 200;
 
 if not generatorFlag:
 	track = wave.open(sys.argv[1], mode="rb")
