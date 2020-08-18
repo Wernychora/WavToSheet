@@ -3,19 +3,28 @@ import struct
 import numpy as np
 import cmath 
 import math
+import re
 import matplotlib.pyplot as plt
 import pylab
 import sys
 from colorsys import hls_to_rgb
 
-def read_file(data):
+def read_wav_file():
 	samples = int(fouriers*frameRate*fourierSection/1000)
 	for sample in range(samples):
 		waveData = track.readframes(1)
 		probe = struct.unpack("<2h", waveData)
 		data.append(probe[0]) #channel 0, quit channel 1
+def read_gen_file(frameRate, length):
+	f = open(sys.argv[1], "r")
+	frameRate = int(next(f).split('\n')[0])
+	length = int(float(next(f).split('\n')[0]) * frameRate)
+	tab = [float(x) for x in next(f).split()]
+	for t in tab:
+		data.append(t)
 
 def fft(freqTab, dft2Tab, toneTab):
+	print(len(data))
 	fourierStep = int(frameRate*fourierSection/1000)
 	for key, val in contraOctave.items():
 		fourierDuration = 1/val
@@ -67,7 +76,7 @@ def diffPlot(array, flagArray, title, nr, bottomMargin, topMargin, differentiato
 				plt.plot(x/20, 0, marker='o', markersize=3, color="red")
 				flagArray[x] = True
 	plt.title(title)
-	plt.xlim(0,15)
+	plt.xlim(0,fouriers/20)
 	plt.ylim(bottomVal,topVal)
 	plt.xlabel("time [s]")
 
@@ -123,7 +132,7 @@ def display(freqTab, dft2Tab, toneFourierSamples, mode):
 			if diffPrimFlags[x] and (diffBisFlags[x-2] or diffBisFlags[x-1] or diffBisFlags[x] or diffBisFlags[x+1]):
 				plt.axvline(x/20, 0, 10000, label='pyplot vertical line', color="red")
 	plt.title("Spectrogram")
-	plt.xlim(0,15)
+	plt.xlim(0,fouriers/20)
 	plt.ylim(0,11000)
 	plt.ylabel("frequency [Hz]")
 	plt.xlabel("time [s]")
@@ -157,14 +166,22 @@ contraOctave = {"C" : 32.70, "Cis" : 34.65, "D" : 36.71, "Dis" : 38.89,
 
 inf = 2000000000
 fourierSection = 50 #ms
-track = wave.open(sys.argv[1], mode="rb")
-length = track.getnframes()
-frameRate = track.getframerate()
-fouriers = 300;
+generatorFlag = re.search("wav$", sys.argv[1]) == None
+track = None
+length = 0
+frameRate = 44100
+fouriers = 10;
+
+if not generatorFlag:
+	track = wave.open(sys.argv[1], mode="rb")
+	length = track.getnframes()
+	frameRate = track.getframerate()
 
 #reading file
 data = []
-read_file(data)
+if generatorFlag: read_gen_file(frameRate, length)
+else: read_wav_file()
+
 
 #fft
 freqTab = []

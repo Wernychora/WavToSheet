@@ -34,5 +34,6 @@ plt.xlabel("time [s]")
 plt.ylabel("amplitude")
 plt.show()
 
-print(frameRate, duration)
+print(frameRate)
+print(duration)
 print(*f)
