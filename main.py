@@ -100,6 +100,7 @@ def display(freqTab, dft2Tab, toneFourierSamples, argData, mode):
 		plt.imshow(colorize(amp, arg), interpolation="none", extent=[0,15,0,11000], aspect="auto")
 		plt.show()
 		return
+	else: amp = amp.transpose()
 
 	#diffPlots
 	diffArray = []
@@ -145,7 +146,7 @@ def display(freqTab, dft2Tab, toneFourierSamples, argData, mode):
 		plt.title("DFT2 spectrogram")
 		plt.xlim(0,15)
 		plt.ylim(0,len(specAxisY))
-		#plt.ylabel("frequency [Hz]")
+		plt.ylabel("frequency [Hz]")
 		plt.xlabel("time [s]")
 		
 	plt.show()
