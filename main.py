@@ -15,7 +15,7 @@ def read_file(data):
 		probe = struct.unpack("<2h", waveData)
 		data.append(probe[0]) #channel 0, quit channel 1
 
-def fft(freqTab, dft2Tab, toneTab, argData, argToneData):
+def fft(freqTab, dft2Tab, toneTab):
 	fourierStep = int(frameRate*fourierSection/1000)
 	for key, val in contraOctave.items():
 		fourierDuration = 1/val
@@ -23,7 +23,6 @@ def fft(freqTab, dft2Tab, toneTab, argData, argToneData):
 		for i in range(fouriers):
 			freqRow = []
 			dataRow = []
-			argRow = []
 			window = np.hanning(fourierSize)
 			for j in range(fourierSize):
 				dataRow.append(data[i*fourierStep+j])
@@ -31,27 +30,21 @@ def fft(freqTab, dft2Tab, toneTab, argData, argToneData):
 			dft = np.fft.rfft(dataRow)
 			for j in range(len(dataRow)//2):
 				freqRow.append(np.log2(abs(dft[j])+1))
-				argRow.append(np.angle(dft[j]))
 			toneTab[key].append(freqRow)
-			argToneData[key].append(argRow)
 			
 	minimalToneFreqRowSize = int(frameRate*1/contraOctave["C"]//4)
 
 	for i in range(fouriers):
 		freqRow = []
-		argRow = []
 		for j in range(minimalToneFreqRowSize):
 			for tone, toneFreqRowArray in toneTab.items():
 				freqRow.append(toneFreqRowArray[i][j])
-			for tone, argToneArray in argToneData.items():
-				argRow.append(argToneArray[i][j])
 		freqTab.append(freqRow)
-		argData.append(argRow)
 	
 	#fft2
 	for i in range(fouriers):
 		fftCol = []
-		dft2 = np.fft.rfft(freqTab[i])
+		dft2 = np.fft.fft(freqTab[i], 4*440)
 		dft2Tab.append(dft2)
 	
 	return minimalToneFreqRowSize
@@ -78,30 +71,27 @@ def diffPlot(array, flagArray, title, nr, bottomMargin, topMargin, differentiato
 	plt.ylim(bottomVal,topVal)
 	plt.xlabel("time [s]")
 
-def colorize(r, arg):
+def colorize(z, filtering):
+    r = np.log2(np.abs(z)+1)
+    arg = np.angle(z)
     h = ((arg + np.pi) / (2 * np.pi) + 0.5) % 1.0
-    l = r/np.amax(r)
+    l = (r/np.amax(r)) ** 2
+    if filtering:
+        l = l * (1-2*abs(0.5-h)) ** 2
     s = 0.8
     colorMatrix = np.vectorize(hls_to_rgb)(h,l,s)
     colorMatrix = np.array(colorMatrix)
     colorMatrix = colorMatrix.swapaxes(0,2) 
     return colorMatrix
     
-def display(freqTab, dft2Tab, toneFourierSamples, argData, mode):
+def display(freqTab, dft2Tab, toneFourierSamples, mode):
 	#spectrogram data
 	specAxisY = []
 	for i in range(toneFourierSamples):
 		for tone, freq in contraOctave.items():
 			specAxisY.append(freq*i)		
-	amp = np.array(freqTab)
-	arg = np.array(argData)
+	amp = np.array(freqTab).transpose()
 	
-	if mode == "fftComplex":
-		plt.imshow(colorize(amp, arg), interpolation="none", extent=[0,15,0,11000], aspect="auto")
-		plt.show()
-		return
-	else: amp = amp.transpose()
-
 	#diffPlots
 	diffArray = []
 	diffFlags = []
@@ -126,7 +116,7 @@ def display(freqTab, dft2Tab, toneFourierSamples, argData, mode):
 		
 	#spectrogram display
 	if mode == "diffPlots": plt.subplot(2, 2, 1)
-	if mode == "spectrograms": plt.subplot(2, 1, 1)
+	if mode == "fftComplex": plt.subplot(3, 1, 1)
 	plt.pcolormesh(np.arange(0, fouriers/20, 1/20), specAxisY, amp, shading="nearest")
 	if mode == "diffPlots":
 		for x in range(2, len(diffArray)-2):
@@ -138,14 +128,16 @@ def display(freqTab, dft2Tab, toneFourierSamples, argData, mode):
 	plt.ylabel("frequency [Hz]")
 	plt.xlabel("time [s]")
 	
-	#fft2 spectrogram
-	if mode == "spectrograms":
-		dft2Data = np.array(dft2Tab).transpose()
-		plt.subplot(2, 1, 2)
-		plt.pcolormesh(np.arange(0, fouriers/20, 1/20), np.arange(0, len(specAxisY)), amp, shading="nearest")
-		plt.title("DFT2 spectrogram")
-		plt.xlim(0,15)
-		plt.ylim(0,len(specAxisY))
+	#fft2 display
+	if mode == "fftComplex":
+		plt.subplot(3, 1, 2)
+		plt.imshow(colorize(np.array(dft2Tab), False), interpolation="none", extent=[0,15,0,4*440], aspect="auto")
+		plt.title("Second FFT")
+		plt.ylabel("frequency [Hz]")
+		plt.xlabel("time [s]")
+		
+		plt.subplot(3, 1, 3)
+		plt.imshow(colorize(np.array(dft2Tab), True), interpolation="none", extent=[0,15,0,4*440], aspect="auto")
 		plt.ylabel("frequency [Hz]")
 		plt.xlabel("time [s]")
 		
@@ -154,7 +146,7 @@ def display(freqTab, dft2Tab, toneFourierSamples, argData, mode):
 #####
 	
 if len(sys.argv) != 3:
-	print ("Program syntax: main.py [name of *.wav file] [spectrograms | diffPlots | fftComplex]")
+	print ("Program syntax: main.py [name of *.wav file] [diffPlots | fftComplex]")
 	exit()
 	
 mode = sys.argv[2]
@@ -177,10 +169,8 @@ read_file(data)
 #fft
 freqTab = []
 dft2Tab = []
-argData = []
-argToneData = { i : [] for i in contraOctave.keys() }
 toneTab = { i : [] for i in contraOctave.keys() }
-toneFourierSamples = fft(freqTab, dft2Tab, toneTab, argData, argToneData)
+toneFourierSamples = fft(freqTab, dft2Tab, toneTab)
 
 #spectrogram + difference plot (modes: "spectrograms", "diffPlots", "fftComplex")
-display(freqTab, dft2Tab, toneFourierSamples, argData, mode)
+display(freqTab, dft2Tab, toneFourierSamples, mode)
